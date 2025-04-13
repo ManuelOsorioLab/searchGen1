@@ -1,0 +1,122 @@
+#!/usr/bin/env python
+# coding: utf-8
+
+# ## Búsqueda de secuencia proteica en diferentes organismos
+# ### Guarda los 4 mejores resultados en Drive con el nombre del organismo
+
+# Instalar dependencias
+!pip install biopython
+
+from Bio import Entrez, SeqIO
+from Bio.Blast import NCBIWWW, NCBIXML
+import time
+from google.colab import drive
+import os
+import re
+
+# Montar Google Drive
+drive.mount('/content/drive')
+
+def clean_filename(filename):
+    """Limpia el nombre de archivo para que sea válido"""
+    return re.sub(r'[\\/*?:"<>|]', "_", filename)
+
+def buscar_y_guardar_resultados(secuencia_proteica, organismo, email, output_dir):
+    """
+    Busca una secuencia proteica en un organismo específico y guarda los 4 mejores resultados en Drive
+
+    Args:
+        secuencia_proteica (str): Secuencia de aminoácidos a buscar
+        organismo (str): Organismo a buscar (ej. "Staphylococcus lugdunensis[Organism]")
+        email (str): Tu email para NCBI
+        output_dir (str): Directorio en Drive para guardar resultados
+    """
+    # Configurar email para NCBI
+    Entrez.email = email
+
+    print(f"Realizando búsqueda BLAST en {organismo}...")
+
+    # Realizar búsqueda BLAST
+    result_handle = NCBIWWW.qblast(
+        program="blastp",
+        database="nr",
+        sequence=secuencia_proteica,
+        entrez_query=organismo,
+        expect=0.001,
+        hitlist_size=4  # Solo pedimos los 4 mejores
+    )
+
+    # Parsear resultados
+    blast_records = NCBIXML.parse(result_handle)
+
+    # Crear directorio si no existe
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+
+    # Procesar los 4 mejores resultados
+    for i, record in enumerate(blast_records):
+        for alignment in record.alignments:
+            for hsp in alignment.hsps:
+                # Calcular porcentaje de similitud
+                similitud = (hsp.identities / len(hsp.query)) * 100
+
+                # Extraer nombre de la especie
+                especie = "Desconocida"
+                match = re.search(r'\[([^\]]+)\]', alignment.title)
+                if match:
+                    especie = match.group(1)
+
+                # Limpiar el nombre del organismo para el nombre de archivo
+                org_limpio = clean_filename(organismo.split("[")[0].strip())
+
+                # Crear nombre de archivo
+                nombre_archivo = f"{org_limpio}_Resultado_{i+1}_Similitud_{similitud:.2f}%_{especie}.txt"
+                nombre_archivo = clean_filename(nombre_archivo)
+                ruta_completa = os.path.join(output_dir, nombre_archivo)
+
+                # Guardar resultados en archivo
+                with open(ruta_completa, 'w') as f:
+                    f.write(f"Organismo buscado: {organismo}\n")
+                    f.write(f"Título: {alignment.title}\n")
+                    f.write(f"Longitud: {alignment.length}\n")
+                    f.write(f"E-value: {hsp.expect}\n")
+                    f.write(f"Porcentaje de similitud: {similitud:.2f}%\n")
+                    f.write(f"Identidades: {hsp.identities}/{len(hsp.query)}\n")
+                    f.write("\nAlineamiento:\n")
+                    f.write(f"Query:  {hsp.query}\n")
+                    f.write(f"Match:  {hsp.match}\n")
+                    f.write(f"Sbjct:  {hsp.sbjct}\n")
+
+                print(f"Guardado: {nombre_archivo}")
+
+            # Solo tomar el primer HSP por alineamiento para simplificar
+            break
+
+# Ejemplo de uso
+if __name__ == "__main__":
+    # Configura tu email para NCBI
+    YOUR_EMAIL = "osorio.manuel00@gmail.com"  # ¡Cambia esto!
+
+    # Secuencia proteica de ejemplo (reemplaza con tu secuencia)
+    SECUENCIA_EJEMPLO = "MGGGFAVNYNFDEIIDRRYTNAMNVEGYKGYLFGDADTSDLKDNDELIRMWVADMDFGTPEVVLNAIRERLNKKILGYTNVFGSEYYEAFVSWTKKRYGFTFSQEHLVFSHGIVAGLIELVGYICDKDDKALIVTPSYGPFKMACDKNHISTVYSPLINHHGYYEIDFDDVRKKVETENIKLCIFANPHNPTGRVWSEEELATLGQIMKENDVWLISDEIHCDIKRSGQSHIPFAKAVPDYDKIITTMSQSKAFNIAGLMFSNIIIQNESLLKTWNTHHFGTENPLSVVATQAAYEKGEGWLQAMNHYLDDNFNYLADFLEKELPHAEFKIPEATYLAWVDLSYYIKEKDIDESMAKFFIKNAGVIIEGAEQFVHNAEGHIRINIAVPREVMKKGLQKIKAALVENLYFQG"
+
+    # Directorio en Drive para guardar resultados
+    OUTPUT_DIR = "/content/drive/MyDrive/Resultados_BLAST2"
+
+    # Lista de organismos a buscar
+    organismos = [
+        "Staphylococcus lugdunensis[Organism]",
+        "Staphylococcus hominis[Organism]",
+        "Staphylococcus haenolyticus[Organism]",
+        "Staphylococcus petrasii[Organism]",
+        "Staphylococcus devriesei[Organism]"
+        # Añade más organismos si lo deseas
+    ]
+
+    print("Iniciando búsqueda y guardado de resultados...")
+
+    for organismo in organismos:
+        buscar_y_guardar_resultados(SECUENCIA_EJEMPLO, organismo, YOUR_EMAIL, OUTPUT_DIR)
+        time.sleep(5)  # Espera 5 segundos entre búsquedas para evitar sobrecargar NCBI
+
+    print("\n¡Proceso completado! Los resultados se han guardado en Google Drive.")
