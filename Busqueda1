@@ -2,20 +2,18 @@
 # coding: utf-8
 
 # ## Búsqueda de secuencia proteica en diferentes organismos
-# ### Guarda los 4 mejores resultados en Drive con el nombre del organismo
+# ### Guarda los 4 mejores resultados en un directorio local con el nombre del organismo
 
 # Instalar dependencias
-!pip install biopython
-
-from Bio import Entrez, SeqIO
-from Bio.Blast import NCBIWWW, NCBIXML
-import time
-from google.colab import drive
-import os
-import re
-
-# Montar Google Drive
-drive.mount('/content/drive')
+try:
+    from Bio import Entrez, SeqIO
+    from Bio.Blast import NCBIWWW, NCBIXML
+    import time
+    import os
+    import re
+except ImportError:
+    print("Algunas dependencias no están instaladas. Ejecute `pip install biopython` para instalarlas.")
+    exit()
 
 def clean_filename(filename):
     """Limpia el nombre de archivo para que sea válido"""
@@ -23,13 +21,13 @@ def clean_filename(filename):
 
 def buscar_y_guardar_resultados(secuencia_proteica, organismo, email, output_dir):
     """
-    Busca una secuencia proteica en un organismo específico y guarda los 4 mejores resultados en Drive
+    Busca una secuencia proteica en un organismo específico y guarda los 4 mejores resultados en un directorio local.
 
     Args:
         secuencia_proteica (str): Secuencia de aminoácidos a buscar
         organismo (str): Organismo a buscar (ej. "Staphylococcus lugdunensis[Organism]")
         email (str): Tu email para NCBI
-        output_dir (str): Directorio en Drive para guardar resultados
+        output_dir (str): Directorio local para guardar resultados
     """
     # Configurar email para NCBI
     Entrez.email = email
@@ -98,10 +96,10 @@ if __name__ == "__main__":
     YOUR_EMAIL = "osorio.manuel00@gmail.com"  # ¡Cambia esto!
 
     # Secuencia proteica de ejemplo (reemplaza con tu secuencia)
-    SECUENCIA_EJEMPLO = "MGGGFAVNYNFDEIIDRRYTNAMNVEGYKGYLFGDADTSDLKDNDELIRMWVADMDFGTPEVVLNAIRERLNKKILGYTNVFGSEYYEAFVSWTKKRYGFTFSQEHLVFSHGIVAGLIELVGYICDKDDKALIVTPSYGPFKMACDKNHISTVYSPLINHHGYYEIDFDDVRKKVETENIKLCIFANPHNPTGRVWSEEELATLGQIMKENDVWLISDEIHCDIKRSGQSHIPFAKAVPDYDKIITTMSQSKAFNIAGLMFSNIIIQNESLLKTWNTHHFGTENPLSVVATQAAYEKGEGWLQAMNHYLDDNFNYLADFLEKELPHAEFKIPEATYLAWVDLSYYIKEKDIDESMAKFFIKNAGVIIEGAEQFVHNAEGHIRINIAVPREVMKKGLQKIKAALVENLYFQG"
+    SECUENCIA_EJEMPLO = "MGGGFAVNYNFDEIIDRRYTNAMNVEGYKGYLFGDADTSDLKDNDELIRMWVADMDFGTPEVVLNAIRERLNKKILGYTNVFGSEYYEAFVSWTKKRYGFTFSQEHLVFSHGIVAGLIELVGYICDKDDKALIVTPSYGPFKMACDKNHISTVYSPLINHHGYYEIDFDDVRKKV[...]"
 
-    # Directorio en Drive para guardar resultados
-    OUTPUT_DIR = "/content/drive/MyDrive/Resultados_BLAST2"
+    # Directorio local para guardar resultados
+    OUTPUT_DIR = "./Resultados_BLAST"
 
     # Lista de organismos a buscar
     organismos = [
@@ -119,4 +117,4 @@ if __name__ == "__main__":
         buscar_y_guardar_resultados(SECUENCIA_EJEMPLO, organismo, YOUR_EMAIL, OUTPUT_DIR)
         time.sleep(5)  # Espera 5 segundos entre búsquedas para evitar sobrecargar NCBI
 
-    print("\n¡Proceso completado! Los resultados se han guardado en Google Drive.")
+    print("\n¡Proceso completado! Los resultados se han guardado en el directorio local.")
